@@ -109,8 +109,8 @@ public class CartPvpMod implements ClientModInitializer {
 
         @Override
         protected void init() {
-            int centerX = this.width / 2;
-            int centerY = this.height / 2;
+            int centerX = getWidth() / 2;
+            int centerY = getHeight() / 2;
 
             this.addDrawableChild(ButtonWidget.builder(
                 Text.literal("Auto Cart: " + (ModConfig.autoCartEnabled ? "ON" : "OFF")),
@@ -127,6 +127,14 @@ public class CartPvpMod implements ClientModInitializer {
                     button.setMessage(Text.literal("Auto Totem: " + (ModConfig.autoTotemEnabled ? "ON" : "OFF")));
                 }
             ).dimensions(centerX - 100, centerY + 2, 200, 20).build());
+        }
+
+        private int getWidth() {
+            return MinecraftClient.getInstance().getWindow().getScaledWidth();
+        }
+
+        private int getHeight() {
+            return MinecraftClient.getInstance().getWindow().getScaledHeight();
         }
 
         @Override

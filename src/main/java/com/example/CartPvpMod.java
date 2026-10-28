@@ -4,8 +4,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.option.KeyBinding;
@@ -14,35 +12,34 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.lwjgl.glfw.GLFW;
 
 public class CartPvpMod implements ClientModInitializer {
-    private static KeyBinding triggerKey;
+    private static KeyBinding comboKey;
+    public static boolean autoTotemEnabled = true;
 
     @Override
     public void onInitializeClient() {
-        triggerKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-            "key.cartistmc.trigger",
+        comboKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+            "key.cartistmc.combo",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_R,
             "category.cartistmc"
         ));
-        KeyBindingHelper.registerKeyBinding(ModConfig.menuKey);
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (ModConfig.menuKey.wasPressed() && client.player != null) {
-                client.setScreen(new CartConfigScreen());
-            }
+            if (client.player == null || client.interactionManager == null) return;
 
-            if (ModConfig.autoTotemEnabled && client.player != null && client.interactionManager != null) {
+            // Auto-Totem (Always active to save you)
+            if (autoTotemEnabled) {
                 handleAutoTotem(client);
             }
 
-            if (ModConfig.autoCartEnabled && triggerKey.isPressed() && client.player != null) {
+            // Cart PvP Combo (Triggers when you press R)
+            if (comboKey.isPressed()) {
                 executeCartCombo(client);
             }
         });
@@ -67,7 +64,6 @@ public class CartPvpMod implements ClientModInitializer {
     private void executeCartCombo(MinecraftClient client) {
         ClientPlayerEntity player = client.player;
         ClientPlayerInteractionManager interactionManager = client.interactionManager;
-        if (player == null || interactionManager == null) return;
 
         int railSlot = findHotbarItem(player, Items.RAIL);
         int tntCartSlot = findHotbarItem(player, Items.TNT_MINECART);
@@ -81,12 +77,15 @@ public class CartPvpMod implements ClientModInitializer {
 
         int originalSlot = player.getInventory().selectedSlot;
 
+        // 1. Place Rail
         player.getInventory().selectedSlot = railSlot;
         interactionManager.interactBlock(player, Hand.MAIN_HAND, blockHit);
 
+        // 2. Place TNT Minecart
         player.getInventory().selectedSlot = tntCartSlot;
         interactionManager.interactBlock(player, Hand.MAIN_HAND, blockHit);
 
+        // 3. Shoot Bow
         if (bowSlot != -1) {
             player.getInventory().selectedSlot = bowSlot;
             interactionManager.interactItem(player, Hand.MAIN_HAND);
@@ -100,46 +99,5 @@ public class CartPvpMod implements ClientModInitializer {
             if (player.getInventory().getStack(i).getItem() == targetItem) return i;
         }
         return -1;
-    }
-
-    public static class CartConfigScreen extends Screen {
-        protected CartConfigScreen() {
-            super(Text.literal("CartistMC Settings"));
-        }
-
-        @Override
-        protected void init() {
-            int centerX = getWidth() / 2;
-            int centerY = getHeight() / 2;
-
-            this.addDrawableChild(ButtonWidget.builder(
-                Text.literal("Auto Cart: " + (ModConfig.autoCartEnabled ? "ON" : "OFF")),
-                button -> {
-                    ModConfig.autoCartEnabled = !ModConfig.autoCartEnabled;
-                    button.setMessage(Text.literal("Auto Cart: " + (ModConfig.autoCartEnabled ? "ON" : "OFF")));
-                }
-            ).dimensions(centerX - 100, centerY - 24, 200, 20).build());
-
-            this.addDrawableChild(ButtonWidget.builder(
-                Text.literal("Auto Totem: " + (ModConfig.autoTotemEnabled ? "ON" : "OFF")),
-                button -> {
-                    ModConfig.autoTotemEnabled = !ModConfig.autoTotemEnabled;
-                    button.setMessage(Text.literal("Auto Totem: " + (ModConfig.autoTotemEnabled ? "ON" : "OFF")));
-                }
-            ).dimensions(centerX - 100, centerY + 2, 200, 20).build());
-        }
-
-        private int getWidth() {
-            return MinecraftClient.getInstance().getWindow().getScaledWidth();
-        }
-
-        private int getHeight() {
-            return MinecraftClient.getInstance().getWindow().getScaledHeight();
-        }
-
-        @Override
-        public boolean shouldPause() {
-            return false;
-        }
     }
 }
